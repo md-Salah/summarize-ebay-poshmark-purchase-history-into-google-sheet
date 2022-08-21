@@ -9,6 +9,12 @@ def numbers_within_text(text):
         numbers[i] = int(numbers[i])
     return numbers
 
+def float_within_text(text):
+    numbers = re.findall('[+-]?[0-9]+[.]?[0-9]*', text)
+    for i in range(len(numbers)):
+        numbers[i] = float(numbers[i])
+    return numbers
+
 def str_to_int(text, decimal_point = 0):
     text = text.replace(',', '')
     text = text.strip()

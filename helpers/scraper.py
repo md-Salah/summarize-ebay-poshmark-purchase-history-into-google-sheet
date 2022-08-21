@@ -25,7 +25,7 @@ import undetected_chromedriver as uc
 
 class Scraper:
 
-    chrome_version = None                           # Chrome browser version
+    chrome_version = 104                           # Chrome browser version
     wait_element_time = 3                           # The time we are waiting for element to get loaded in the html in each loop count
     cookies_folder = 'cookies' + os.path.sep        # In this folder we will save cookies from logged in users
 
@@ -33,7 +33,7 @@ class Scraper:
     def __init__(self, url, headless=False, proxy=None, exit_on_missing_element = True):
         self.url = url
         self.exit_on_missing_element = exit_on_missing_element        # Wheather we exit or not if we are missing an element
-        self.browser_paths = read_executable_path_info('chrome_path.txt', '=')
+        self.browser_paths = read_executable_path_info('inputs/chrome_path.txt', '=')
         self.browser_executable_path = self.browser_paths['browser'] or None
         self.driver_executable_path = os.path.join(os.getcwd(), self.browser_paths['driver']) if self.browser_paths['driver'] else None
         self.headless = headless or (True if self.browser_paths['headless'].lower() == 'true' else False)
@@ -56,10 +56,10 @@ class Scraper:
             '--start-maximized',
             # '--disable-blink-features=AutomationControlled',              # This will solve the driver.get(url) error & also selenium detection, chrome shows warning
             # '--disable-dev-shm-usage',                                    # May be required for headless chrome
-            # '--no-sandbox',                                               # with sandbox, one tab cannot watch another tab
+            # '--no-sandbox',                                               # with sandbox, one tab cannot watch another tab, bypass os security model.
             '--disable-popup-blocking',                                     # Otherwise new tab will not be opened
             '--no-first-run --no-service-autorun --password-store=basic',   # just some options passing in to skip annoying popups
-            # '--user-data-dir=c:\\temp\\profile',                            # Saving user profile
+            # '--user-data-dir=c:\\temp\\profile',                          # Saving user profile, Turning this on creates issue from not reachable. see stackoverflow https://stackoverflow.com/questions/69407211/cannot-connect-to-chrome-at-127-0-0-137541-when-using-undetected-chromedriver
         ]
 
         # experimental_options = {
@@ -107,7 +107,7 @@ class Scraper:
         print('headless:    ', self.headless)
         
     # Add login functionality and load cookies if there are any with 'cookies_file_name'
-    def add_login_functionality(self, is_logged_in_selector, loop_count=10, login_function=None, exit_on_login_failure=True, cookies_file_name='cookies'):
+    def add_login_functionality(self, is_logged_in_selector, loop_count=5, login_function=None, exit_on_login_failure=True, cookies_file_name='cookies'):
         # Three step Login. 1:Using cookies, 2:By Selenium UI automation, 3:Manual login Then press any key
         self.is_logged_in_selector = is_logged_in_selector
         self.cookies_file_name = cookies_file_name + '.pkl'
@@ -124,8 +124,7 @@ class Scraper:
         if self.login_status == False:
             if login_function:
                 login_function()
-                self.login_status = self.is_logged_in(
-                    loop_count)  # Check if user is logged in
+                self.login_status = self.is_logged_in(loop_count)  # Check if user is logged in
 
         # Step 3: Manual Login
         if self.login_status == False:
@@ -204,7 +203,8 @@ class Scraper:
         self.driver.get(url)
 
     def exit_with_exception(self, reason):  # Utility function
-        if input('e: Exit | Press any key to exit...') == 'e':
+        print(reason)
+        if input('e: Exit | Press any key to continue...') == 'e':
             raise Exception(reason)
 
     def find_element(self, css_selector='', xpath='', ref_element=None, loop_count=1, exit_on_missing_element='f', wait_element_time=None):
@@ -292,8 +292,11 @@ class Scraper:
         element.send_keys(Keys.BACKSPACE)
         element.send_keys(Keys.TAB)
 
-    def scroll_wait(self, selector, sleep_duration=2):
-        element = self.driver.find_element(By.CSS_SELECTOR, selector)
+    def scroll_wait(self, selector='', element=None, sleep_duration=2):
+        if selector:
+            element = self.driver.find_element(By.CSS_SELECTOR, selector)
+        if not element:
+            self.exit_with_exception(f'No element to scrollIntoView with selector {selector}')
         self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'auto',block: 'center',inline: 'center'});", element)
         time.sleep(sleep_duration)
 
